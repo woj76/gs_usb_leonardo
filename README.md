@@ -62,7 +62,7 @@ into the bootloader -- END OF WARNING.
 
 So now you can say "make install", the upload hex file will be generated and the
 installer will wait for the indicated ACM port (the default is /dev/ttyACM0, to
-change it use "make ACM_PORT=/dev/ttyACM<N> install" instead) to appear. When
+change it use "make ACM_PORT=/dev/ttyACMX install" instead) to appear. When
 installing the code on a board that currently has Arduino IDE compatible sketch
 this should just go through and you should end up with the firmware installed.
 When updating the existing gs_usb_leonardo code now is the time to reset the
@@ -94,12 +94,12 @@ If you want this can0 interface setup to come up automatically on connecting the
 device and be more permanent you have to modify your system network settings. On
 my Ubuntu 18.04 I added this (you need sudo for this) to /etc/network/interfaces:
 
-allow-hotplug can0
-iface can0 can static
-    bitrate 500000
-    up /sbin/ip link set $IFACE down
-    up /sbin/ip link set $IFACE type can bitrate 500000 restart-ms 10
-    up /sbin/ip link set $IFACE up
+        allow-hotplug can0
+        iface can0 can static
+            bitrate 500000
+            up /sbin/ip link set $IFACE down
+            up /sbin/ip link set $IFACE type can bitrate 500000 restart-ms 10
+            up /sbin/ip link set $IFACE up
 
 You can also configure the interface to work in loopback mode, this is useful to
 check your installation without any real CAN traffic or device. Just add
