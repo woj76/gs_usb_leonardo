@@ -79,7 +79,7 @@ USING
 You should be all set, just to make sure reconnect the Leonardo CAN-BUS board to
 your PC. Your Linux should recognise the device as gs_usb compatible, you should
 be able to see the gs_usb module loaded when saying "lsmod" and some gs_usb
-messages in when saying "dmesg" stating a successful driver load.
+messages when saying "dmesg" stating a successful driver load.
 
 What remains is to bring up the CAN interface. You can do this manually by saying
 (sudo will ask you for your user password):
