@@ -202,10 +202,11 @@ repeat_main:
 	while(!gs_can_mode);
 	if(gs_can_mode_flags & GS_CAN_MODE_LOOP_BACK) {
 		mcp_set_mode_loopback();
-	} else if(gs_can_mode_flags & GS_CAN_MODE_LISTEN_ONLY) {
-		mcp_set_mode_listen();
 	} else {
 		EIMSK |= (1<<INT6);
+		if(gs_can_mode_flags & GS_CAN_MODE_LISTEN_ONLY) {
+			mcp_set_mode_listen();
+		}
 	}
 	gs_bittiming_to_mcp(&gs_requested_bittiming, gs_can_mode_flags & GS_CAN_MODE_TRIPLE_SAMPLE, mcp_cnfs);
 	if(mcp_begin() == OK && mcp_mode_one_shot(gs_can_mode_flags & GS_CAN_MODE_ONE_SHOT) == OK) {
