@@ -244,11 +244,14 @@ uint8_t mcp_service_interrupt() {
 	}
 	if(res & MCP_TX0IF) {
 		mcp_modify_register_spi(MCP_CANINTF, MCP_TX0IF, 0);
-	} else if(res & MCP_TX1IF) {
+	}
+	if(res & MCP_TX1IF) {
 		mcp_modify_register_spi(MCP_CANINTF, MCP_TX1IF, 0);
-	} else if(res & MCP_TX2IF) {
+	}
+	if(res & MCP_TX2IF) {
 		mcp_modify_register_spi(MCP_CANINTF, MCP_TX2IF, 0);
-	} else if(res & MCP_ERRIF) {
+	}
+	if(res & MCP_ERRIF) {
 		mcp_err_flags = canintf_eflag[1];
 		mcp_modify_register_spi(MCP_CANINTF, MCP_ERRIF, 0);
 	}

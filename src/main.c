@@ -104,13 +104,16 @@ ISR(INT6_vect) {
 	if(ri & MCP_TX0IF) {
 		usb_send((uint8_t *)&hfs.frames[mg.hf_num[0]], sizeof(gs_host_frame), FALSE);
 		mg.hf_num[0] = 0;
-	} else if(ri & MCP_TX1IF) {
+	}
+	if(ri & MCP_TX1IF) {
 		usb_send((uint8_t *)&hfs.frames[mg.hf_num[1]], sizeof(gs_host_frame), FALSE);
 		mg.hf_num[1] = 0;
-	} else if(ri & MCP_TX2IF) {
+	}
+	if(ri & MCP_TX2IF) {
 		usb_send((uint8_t *)&hfs.frames[mg.hf_num[2]], sizeof(gs_host_frame), FALSE);
 		mg.hf_num[2] = 0;
-	} else if(ri & MCP_ERRIF) {
+	}
+	if(ri & MCP_ERRIF) {
 		mcp_to_err_host_frame(mcp_err_flags, &hfs.frames[HOST_FRAME_ERR_IDX]);
 		usb_send((uint8_t *)&hfs.frames[HOST_FRAME_ERR_IDX], sizeof(gs_host_frame), TRUE);
 	}
@@ -125,7 +128,7 @@ main_loop_repeat:
 		// gs_usb uses a 10 place buffer for transmission, we can hold that much
 		// without checking. If that ever changes there (Linux kernel) this size
 		// check needs to be activated!
-		while(/* hfs.size < HOST_FRAME_IN_NUM && */ usb_receive((uint8_t *)&hfs.frames[hfs.index_in], sizeof(gs_host_frame))) {
+		while(hfs.size < HOST_FRAME_IN_NUM && usb_receive((uint8_t *)&hfs.frames[hfs.index_in], sizeof(gs_host_frame))) {
 			hfs.index_in++;
 			if(hfs.index_in == HOST_FRAME_ERR_IDX) {
 				hfs.index_in = HOST_FRAME_IN_IDX;

@@ -75,7 +75,7 @@ inline void usb_send(uint8_t* ptr, uint8_t len, uint8_t blink) {
 //	if (usb_suspended) {
 //		UDCON |= (1 << RMWKUP);
 //	}
-	uint8_t time_out = 0xFF;
+	uint16_t time_out = 0xFFFF;
 	register uint8_t _sreg = SREG;
 	cli();
 	UENUM = udc->usb_endpoint_in;
