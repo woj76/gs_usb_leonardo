@@ -58,7 +58,8 @@ avrdude to get into the device by manipulating the ACM serial port will not work
 simply because after gs_usb_leonardo is installed the ACM port disappears and is
 only present when in the bootloader mode. The file reset_ground_pads.jpg shows
 the ground and reset pads on the board that you need to short to reset the device
-into the bootloader -- END OF WARNING.
+into the bootloader. The other (PNG) file shows a suggestion on where you can
+connect the reset pin on the DB9 CAN connector for convenience. -- END OF WARNING.
 
 So now you can say "make install", the upload hex file will be generated and the
 installer will wait for the indicated ACM port (the default is /dev/ttyACM0, to
