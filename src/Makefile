@@ -42,9 +42,10 @@ $(HEX_FILE): $(ELF_FILE)
 	@echo "OK."
 
 install: $(HEX_FILE)
-	@echo -n "Uploading / waiting for port $(ACM_PORT) (device boot reset)"
-	@while test ! -e $(ACM_PORT); do echo -n "."; sleep 1; done
-	@echo " found.";
+	@echo -n "Uploading / waiting for port $(ACM_PORT) (device boot reset)... "
+	@while test ! -e $(ACM_PORT); do sleep 0; done
+	@while test `stat -c %G $(ACM_PORT)` != dialout ; do sleep 0; done
+	@echo "found."; 
 	@avrdude -patmega32u4 -cavr109 -P$(ACM_PORT) -b57600 -D -Uflash:w:$(HEX_FILE):i
 
 clean:
