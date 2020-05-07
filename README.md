@@ -104,7 +104,7 @@ my Ubuntu 18.04 I added this (you need sudo for this) to /etc/network/interfaces
 
 You can also configure the interface to work in loopback mode, this is useful to
 check your installation without any real CAN traffic or device. Just add
-"loopback on" before "restart-ms 10" in either of the case above.
+"loopback on" before "restart-ms 10" in either of the cases above.
 
 Finally, I did not find it necessary to play with txqueuelen parameter for the
 can0 interface that one sees often quoted on the Internet in the context of
