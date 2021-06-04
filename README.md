@@ -102,6 +102,11 @@ my Ubuntu 18.04 I added this (you need sudo for this) to /etc/network/interfaces
             up /sbin/ip link set $IFACE type can bitrate 500000 restart-ms 10
             up /sbin/ip link set $IFACE up
 
+On Ubuntu 20.04 this stopped working and instead you have to use the systemd
+functionality, check the provided file 80-can.network for details. (I also
+got some serious stability issues on high-speed dense CAN traffic on 20.04,
+not yet sure where the problem is...)
+
 You can also configure the interface to work in loopback mode, this is useful to
 check your installation without any real CAN traffic or device. Just add
 "loopback on" before "restart-ms 10" in either of the cases above.

@@ -1,0 +1,11 @@
+# For Ubuntu 20.04
+
+[Match]
+Name=can*
+
+[CAN]
+BitRate=500000
+
+# Put this file in: "/etc/systemd/network/" and then run "sudo systemctl enable systemd-networkd" to enable systemd-networkd
+# Now start systemd-networkd: "sudo systemctl start systemd-networkd"
+# Credit: https://github.com/linux-can/can-utils/issues/68#issuecomment-584505426
