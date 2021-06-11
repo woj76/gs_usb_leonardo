@@ -66,7 +66,7 @@ usb_device_configuration gs_udc = {
 	.usb_interface_num = GS_USB_INTERFACE,
 	.usb_endpoint_in = GS_USB_ENDPOINT_IN,
 	.usb_endpoint_out = GS_USB_ENDPOINT_OUT
-}; 
+};
 
 void clear_data() {
 	for(uint8_t i=0; i<HOST_FRAMES_SIZE; i++) {
@@ -91,7 +91,7 @@ void clear_data() {
 	mg.mcp_index = 0;
 }
 
-ISR(INT6_vect) { 
+ISR(INT6_vect) {
 	uint8_t ri = mcp_service_interrupt();
 	if(ri & MCP_RX0IF) {
 		mcp_to_gs_host_frame(mcp_buf_in[0], &hfs.frames[HOST_FRAME_OUT_1_IDX]);
@@ -185,7 +185,7 @@ loopback_main_loop_repeat:
 	uint8_t r = mcp_receive_can_frame();
 	if(r) {
 		r--;
-		mcp_to_gs_host_frame(mcp_buf_in[r], &hfs.frames[r]); 
+		mcp_to_gs_host_frame(mcp_buf_in[r], &hfs.frames[r]);
 		usb_send((uint8_t *)&hfs.frames[r], sizeof(gs_host_frame), TRUE);
 	}
 	goto loopback_main_loop_repeat;
@@ -212,7 +212,7 @@ repeat_main:
 		}
 	}
 	gs_bittiming_to_mcp(&gs_requested_bittiming, gs_can_mode_flags & GS_CAN_MODE_TRIPLE_SAMPLE, mcp_cnfs);
-	if(mcp_begin() == OK && mcp_mode_one_shot(gs_can_mode_flags & GS_CAN_MODE_ONE_SHOT) == OK) {
+	if(mcp_begin(FALSE) == OK && mcp_mode_one_shot(gs_can_mode_flags & GS_CAN_MODE_ONE_SHOT) == OK) {
 		if(gs_can_mode_flags & GS_CAN_MODE_LOOP_BACK) {
 			loopback_main_loop();
 		} else {

@@ -35,7 +35,7 @@ void mcp_set_mode_loopback();
 void mcp_set_mode_listen();
 uint8_t mcp_mode_one_shot(uint8_t one_shot);
 
-uint8_t mcp_begin();
+uint8_t mcp_begin(uint8_t use_rb2);
 uint8_t mcp_init_mask(uint8_t num, uint8_t ext, uint32_t data);
 uint8_t mcp_init_filt(uint8_t num, uint8_t ext, uint32_t data);
 

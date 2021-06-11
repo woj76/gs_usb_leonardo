@@ -159,7 +159,7 @@ void mcp_init_buffers() {
 	mcp_set_register_spi(MCP_RXB1CTRL, 0);
 }
 
-uint8_t mcp_init() {
+uint8_t mcp_init(uint8_t use_rb2) {
 	mcp_reset_spi();
 	uint8_t res = mcp_set_ctrl_mode(MODE_CONFIG);
 	if(res) {
@@ -176,8 +176,12 @@ uint8_t mcp_init() {
 	} else {
 		mcp_set_register_spi(MCP_CANINTE, MCP_RX0IF | MCP_RX1IF | MCP_TX0IF | MCP_TX1IF | MCP_TX2IF | MCP_ERRIF);
 	}
-	mcp_modify_register_spi(MCP_RXB0CTRL, MCP_RXB_RX_MASK | MCP_RXB_BUKT_MASK, MCP_RXB_RX_STDEXT | MCP_RXB_BUKT_MASK);
-	mcp_modify_register_spi(MCP_RXB1CTRL, MCP_RXB_RX_MASK, MCP_RXB_RX_STDEXT);
+	if(use_rb2) {
+		mcp_modify_register_spi(MCP_RXB0CTRL, MCP_RXB_RX_MASK | MCP_RXB_BUKT_MASK, MCP_RXB_RX_STDEXT | MCP_RXB_BUKT_MASK);
+		mcp_modify_register_spi(MCP_RXB1CTRL, MCP_RXB_RX_MASK, MCP_RXB_RX_STDEXT);		
+	} else {
+		mcp_modify_register_spi(MCP_RXB0CTRL, MCP_RXB_RX_MASK, MCP_RXB_RX_STDEXT);
+	}
 	return mcp_set_ctrl_mode(mcp_device_mode);
 }
 
@@ -193,15 +197,15 @@ void mcp_set_mode_listen() {
 	mcp_device_mode = MODE_LISTENONLY;
 }
 
-uint8_t mcp_begin() {
+uint8_t mcp_begin(uint8_t use_rb2) {
 	DDRB |= 0x01;
 	mcp_unselect();
 	spi_init();
-	return mcp_init();
+	return mcp_init(use_rb2);
 }
 
 inline void mcp_enqueue_can_frame(uint8_t txbctrl_index, uint8_t len) {
-	uint8_t txctrl = MCP_TXBCTRL(txbctrl_index); 
+	uint8_t txctrl = MCP_TXBCTRL(txbctrl_index);
 	mcp_set_registers_spi(txctrl+1, mcp_buf_out, len);
 	uint8_t t_idx = txbctrl_index + 1;
 	if(t_idx == MCP_N_TXBUFFERS) {
@@ -237,7 +241,7 @@ uint8_t mcp_service_interrupt() {
 	if(res & MCP_RX0IF) {
 		mcp_read_registers_spi(MCP_RXBUF_0, mcp_buf_in[0], 13);
 		mcp_modify_register_spi(MCP_CANINTF, MCP_RX0IF, 0);
-	} 
+	}
 	if(res & MCP_RX1IF) {
 		mcp_read_registers_spi(MCP_RXBUF_1, mcp_buf_in[1], 13);
 		mcp_modify_register_spi(MCP_CANINTF, MCP_RX1IF, 0);
