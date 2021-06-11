@@ -39,25 +39,17 @@
 #include "bool.h"
 #include "leds.h"
 
-// 2 out frames, 16 in frames, error frame
 #define HOST_FRAME_OUT_1_IDX	0
 #define HOST_FRAME_OUT_2_IDX	1
 #define HOST_FRAME_IN_IDX	2
-#define HOST_FRAME_IN_NUM	16
+#define HOST_FRAME_IN_NUM	MCP_N_TXBUFFERS
 #define HOST_FRAME_ERR_IDX	(HOST_FRAME_IN_IDX + HOST_FRAME_IN_NUM)
 #define HOST_FRAMES_SIZE	(HOST_FRAME_ERR_IDX + 1)
 
-struct host_frame_rb {
-	volatile gs_host_frame frames[HOST_FRAMES_SIZE];
-	uint8_t index_in;
-	uint8_t index_out;
-	uint8_t size;
-} hfs;
+volatile gs_host_frame host_frames[HOST_FRAMES_SIZE];
 
-struct mcp_to_gs {
-	uint8_t mcp_index;
-	uint8_t hf_num[MCP_N_TXBUFFERS];
-} mg;
+uint8_t mcp_index;
+volatile uint8_t mcp_free[MCP_N_TXBUFFERS];
 
 usb_device_configuration gs_udc = {
 	.usb_init_func = gs_usb_init,
@@ -70,52 +62,50 @@ usb_device_configuration gs_udc = {
 
 void clear_data() {
 	for(uint8_t i=0; i<HOST_FRAMES_SIZE; i++) {
-		hfs.frames[i].echo_id = 0;
-		hfs.frames[i].can_id = 0;
-		hfs.frames[i].can_dlc = 0;
-		hfs.frames[i].channel = 0;
-		hfs.frames[i].flags = 0;
-		hfs.frames[i].reserved = 0;
+		host_frames[i].echo_id = 0;
+		host_frames[i].can_id = 0;
+		host_frames[i].can_dlc = 0;
+		host_frames[i].channel = 0;
+		host_frames[i].flags = 0;
+		host_frames[i].reserved = 0;
 		for(uint8_t j=0; j<8; j++) {
-			hfs.frames[i].data[j] = 0;
+			host_frames[i].data[j] = 0;
 		}
 	}
 	// These three freames are the actual frames (non echo).
-	hfs.frames[HOST_FRAME_OUT_1_IDX].echo_id =
-		hfs.frames[HOST_FRAME_OUT_2_IDX].echo_id =
-		hfs.frames[HOST_FRAME_ERR_IDX].echo_id =
+	host_frames[HOST_FRAME_OUT_1_IDX].echo_id =
+		host_frames[HOST_FRAME_OUT_2_IDX].echo_id =
+		host_frames[HOST_FRAME_ERR_IDX].echo_id =
 		0xFFFFFFFF;
-	hfs.index_in = hfs.index_out = 2;
-	hfs.size = 0;
-	mg.hf_num[0] = mg.hf_num[1] = mg.hf_num[2] = 0;
-	mg.mcp_index = 0;
+	mcp_free[0] = mcp_free[1] = mcp_free[2] = TRUE;
+	mcp_index = 0;
 }
 
 ISR(INT6_vect) {
 	uint8_t ri = mcp_service_interrupt();
 	if(ri & MCP_RX0IF) {
-		mcp_to_gs_host_frame(mcp_buf_in[0], &hfs.frames[HOST_FRAME_OUT_1_IDX]);
-		usb_send((uint8_t *)&hfs.frames[HOST_FRAME_OUT_1_IDX], sizeof(gs_host_frame), TRUE);
+		mcp_to_gs_host_frame(mcp_buf_in[0], &host_frames[HOST_FRAME_OUT_1_IDX]);
+		usb_send((uint8_t *)&host_frames[HOST_FRAME_OUT_1_IDX], sizeof(gs_host_frame), TRUE);
 	}
 	if(ri & MCP_RX1IF) {
-		mcp_to_gs_host_frame(mcp_buf_in[1], &hfs.frames[HOST_FRAME_OUT_2_IDX]);
-		usb_send((uint8_t *)&hfs.frames[HOST_FRAME_OUT_2_IDX], sizeof(gs_host_frame), TRUE);
+		mcp_to_gs_host_frame(mcp_buf_in[1], &host_frames[HOST_FRAME_OUT_2_IDX]);
+		usb_send((uint8_t *)&host_frames[HOST_FRAME_OUT_2_IDX], sizeof(gs_host_frame), TRUE);
 	}
 	if(ri & MCP_TX0IF) {
-		usb_send((uint8_t *)&hfs.frames[mg.hf_num[0]], sizeof(gs_host_frame), FALSE);
-		mg.hf_num[0] = 0;
+		usb_send((uint8_t *)&host_frames[HOST_FRAME_IN_IDX], sizeof(gs_host_frame), FALSE);
+		mcp_free[0] = TRUE;
 	}
 	if(ri & MCP_TX1IF) {
-		usb_send((uint8_t *)&hfs.frames[mg.hf_num[1]], sizeof(gs_host_frame), FALSE);
-		mg.hf_num[1] = 0;
+		usb_send((uint8_t *)&host_frames[HOST_FRAME_IN_IDX + 1], sizeof(gs_host_frame), FALSE);
+		mcp_free[1] = TRUE;
 	}
 	if(ri & MCP_TX2IF) {
-		usb_send((uint8_t *)&hfs.frames[mg.hf_num[2]], sizeof(gs_host_frame), FALSE);
-		mg.hf_num[2] = 0;
+		usb_send((uint8_t *)&host_frames[HOST_FRAME_IN_IDX + 2], sizeof(gs_host_frame), FALSE);
+		mcp_free[2] = TRUE;
 	}
 	if(ri & MCP_ERRIF) {
-		mcp_to_err_host_frame(mcp_err_flags, &hfs.frames[HOST_FRAME_ERR_IDX]);
-		usb_send((uint8_t *)&hfs.frames[HOST_FRAME_ERR_IDX], sizeof(gs_host_frame), TRUE);
+		mcp_to_err_host_frame(mcp_err_flags, &host_frames[HOST_FRAME_ERR_IDX]);
+		usb_send((uint8_t *)&host_frames[HOST_FRAME_ERR_IDX], sizeof(gs_host_frame), TRUE);
 	}
 }
 
@@ -124,30 +114,16 @@ main_loop_repeat:
 	if(!gs_can_mode) {
 		return;
 	}
-	if(!mg.hf_num[mg.mcp_index]) {
-		// gs_usb uses a 10 place buffer for transmission, we can hold that much
-		// without checking. If that ever changes there (Linux kernel) this size
-		// check needs to be activated!
-		while(hfs.size < HOST_FRAME_IN_NUM && usb_receive((uint8_t *)&hfs.frames[hfs.index_in], sizeof(gs_host_frame))) {
-			hfs.index_in++;
-			if(hfs.index_in == HOST_FRAME_ERR_IDX) {
-				hfs.index_in = HOST_FRAME_IN_IDX;
+	if(mcp_free[mcp_index]) {
+		uint8_t hf_index = mcp_index + HOST_FRAME_IN_IDX;
+		if(usb_receive((uint8_t *)&host_frames[hf_index], sizeof(gs_host_frame))) {
+			mcp_free[mcp_index] = FALSE;
+			mcp_enqueue_can_frame(mcp_index, gs_host_frame_to_mcp(&host_frames[hf_index], mcp_buf_out));
+			mcp_index++;
+			if(mcp_index == MCP_N_TXBUFFERS) {
+				mcp_index = 0;
 			}
-			hfs.size++;
-		}
-		if(hfs.size) {
-			uint8_t fl = gs_host_frame_to_mcp(&hfs.frames[hfs.index_out], mcp_buf_out);
-			mg.hf_num[mg.mcp_index] = hfs.index_out;
-			hfs.index_out++;
-			if(hfs.index_out == HOST_FRAME_ERR_IDX) {
-				hfs.index_out = HOST_FRAME_IN_IDX;
-			}
-			hfs.size--;
-			mcp_enqueue_can_frame(mg.mcp_index, fl);
-			mg.mcp_index++;
-			if(mg.mcp_index == MCP_N_TXBUFFERS) {
-				mg.mcp_index = 0;
-			}
+
 		}
 	}
 	goto main_loop_repeat;
@@ -169,11 +145,10 @@ loopback_main_loop_repeat:
 	if(!gs_can_mode) {
 		return;
 	}
-	if(usb_receive((uint8_t *)&hfs.frames[HOST_FRAME_IN_IDX], sizeof(gs_host_frame))) {
-		uint8_t fl = gs_host_frame_to_mcp(&hfs.frames[HOST_FRAME_IN_IDX], mcp_buf_out);
-		mcp_enqueue_can_frame(0, fl);
+	if(usb_receive((uint8_t *)&host_frames[HOST_FRAME_IN_IDX], sizeof(gs_host_frame))) {
+		mcp_enqueue_can_frame(0, gs_host_frame_to_mcp(&host_frames[HOST_FRAME_IN_IDX], mcp_buf_out));
 		if(mcp_send_can_frame(0) == OK) {
-			usb_send((uint8_t *)&hfs.frames[HOST_FRAME_IN_IDX], sizeof(gs_host_frame), FALSE);
+			usb_send((uint8_t *)&host_frames[HOST_FRAME_IN_IDX], sizeof(gs_host_frame), FALSE);
 		}
 	}
 	// TODO Why is this delay necessary?
@@ -185,8 +160,8 @@ loopback_main_loop_repeat:
 	uint8_t r = mcp_receive_can_frame();
 	if(r) {
 		r--;
-		mcp_to_gs_host_frame(mcp_buf_in[r], &hfs.frames[r]);
-		usb_send((uint8_t *)&hfs.frames[r], sizeof(gs_host_frame), TRUE);
+		mcp_to_gs_host_frame(mcp_buf_in[r], &host_frames[r]);
+		usb_send((uint8_t *)&host_frames[r], sizeof(gs_host_frame), TRUE);
 	}
 	goto loopback_main_loop_repeat;
 }
